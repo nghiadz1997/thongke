@@ -2,9 +2,8 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <!-- Meta viewport rất quan trọng để hiển thị chuẩn trên giao diện điện thoại -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dashboard Quản Lý PC - Firebase</title>
+    <title>Quản Lý Máy Bộ PC NSG</title>
     
     <!-- Bootstrap 5 & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -12,19 +11,32 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
-        body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .card { box-shadow: 0 4px 6px rgba(0,0,0,0.04); border: none; margin-bottom: 20px; border-radius: 8px; }
-        .card-header { background-color: #fff; font-weight: bold; border-bottom: 1px solid #f0f0f0; border-radius: 8px 8px 0 0 !important; color: #333; }
-        .chart-container { position: relative; height: 250px; width: 100%; }
-        .table th { background-color: #f8f9fa; white-space: nowrap; }
-        .lic-icon { font-size: 1.1rem; margin-left: 4px; vertical-align: middle; }
+        body { background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card { box-shadow: 0 2px 12px rgba(0,0,0,0.08); border: none; margin-bottom: 20px; border-radius: 10px; }
+        .card-header { background-color: #fff; font-weight: 700; border-bottom: 1px solid #eef0f2; border-radius: 10px 10px 0 0 !important; color: #2c3e50; }
+        .chart-container { position: relative; height: 220px; width: 100%; }
+        .table th { background-color: #f8f9fa; white-space: nowrap; font-size: 0.9rem; }
+        .table td { vertical-align: middle; font-size: 0.9rem; }
         
-        /* Tối ưu riêng cho màn hình điện thoại */
-        @media (max-width: 768px) {
+        /* Form Section Styles */
+        .section-title { font-size: 0.95rem; font-weight: 700; color: #0d6efd; border-bottom: 2px solid #eef0f2; padding-bottom: 5px; margin-bottom: 15px; margin-top: 20px;}
+        .form-control, .form-select { font-size: 0.9rem; border-radius: 6px; }
+        .form-label { font-size: 0.85rem; font-weight: 600; color: #495057; margin-bottom: 4px;}
+        
+        /* Hardware Grid mimicking user's image */
+        .hw-grid { background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef; }
+        
+        /* Dynamic Software Box */
+        .software-box { background: #fff; border: 1px dashed #ced4da; padding: 10px; border-radius: 8px; margin-bottom: 10px; position: relative;}
+        
+        /* Modal Detail styling */
+        .detail-row { border-bottom: 1px solid #eee; padding: 8px 0; }
+        .detail-label { font-weight: 600; color: #6c757d; font-size: 0.85rem; }
+        .detail-value { font-weight: 500; color: #212529; font-size: 0.95rem; }
+        
+        @media (max-width: 992px) {
             .header-action { flex-direction: column; align-items: stretch !important; gap: 15px; }
-            .header-action select { width: 100%; }
             .table-responsive { border: 1px solid #dee2e6; border-radius: 8px; }
-            .badge { font-size: 0.8rem; }
         }
     </style>
 </head>
@@ -32,99 +44,153 @@
 
 <div class="container-fluid py-3 px-3 py-md-4 px-md-4">
     <div class="d-flex justify-content-between align-items-center mb-4 header-action">
-        <h4 class="text-primary fw-bold m-0"><i class="bi bi-cloud-check"></i> Quản Lý Bản Quyền Phần Mềm</h4>
-        <div class="d-flex align-items-center w-sm-100">
-            <label class="fw-bold me-2 text-nowrap d-none d-md-block"><i class="bi bi-funnel"></i> Lọc:</label>
-            <select class="form-select border-primary" id="filterDepartment">
-                <option value="All">Tất cả Phòng / Khoa</option>
+        <h3 class="text-primary fw-bold m-0"><i class="bi bi-pc-display-horizontal"></i> QUẢN LÝ MÁY BỘ PC NSG</h3>
+        <div class="d-flex align-items-center w-sm-100 gap-2">
+            <select class="form-select border-primary" id="filterCategory" style="width: auto;">
+                <option value="All">Tất cả Khối</option>
+                <option value="Ban Giám Hiệu">Ban Giám Hiệu</option>
+                <option value="Phòng">Các Phòng</option>
+                <option value="Khoa">Các Khoa</option>
             </select>
         </div>
     </div>
 
     <!-- Khu vực Biểu đồ -->
-    <div class="row">
+    <div class="row mb-3">
         <div class="col-md-6 col-lg-3">
-            <div class="card">
-                <div class="card-header"><i class="bi bi-windows text-primary"></i> Windows</div>
-                <div class="card-body"><div class="chart-container"><canvas id="winChart"></canvas></div></div>
+            <div class="card h-100">
+                <div class="card-header"><i class="bi bi-diagram-3 text-primary"></i> Phân bổ theo Khối</div>
+                <div class="card-body p-2"><div class="chart-container"><canvas id="categoryChart"></canvas></div></div>
             </div>
         </div>
         <div class="col-md-6 col-lg-3">
-            <div class="card">
-                <div class="card-header"><i class="bi bi-file-earmark-word text-success"></i> Office</div>
-                <div class="card-body"><div class="chart-container"><canvas id="officeChart"></canvas></div></div>
+            <div class="card h-100">
+                <div class="card-header"><i class="bi bi-windows text-info"></i> Tình trạng Windows</div>
+                <div class="card-body p-2"><div class="chart-container"><canvas id="winChart"></canvas></div></div>
             </div>
         </div>
         <div class="col-md-6 col-lg-3">
-            <div class="card border-primary">
-                <div class="card-header bg-primary text-white"><i class="bi bi-shield-check"></i> Báo cáo Bản Quyền</div>
-                <div class="card-body"><div class="chart-container"><canvas id="licenseChart"></canvas></div></div>
+            <div class="card h-100">
+                <div class="card-header"><i class="bi bi-file-earmark-word text-success"></i> Tình trạng Office</div>
+                <div class="card-body p-2"><div class="chart-container"><canvas id="officeChart"></canvas></div></div>
             </div>
         </div>
         <div class="col-md-6 col-lg-3">
-            <div class="card">
-                <div class="card-header"><i class="bi bi-box-seam text-warning"></i> Top 5 Phần mềm</div>
-                <div class="card-body"><div class="chart-container"><canvas id="softwareChart"></canvas></div></div>
+            <div class="card h-100">
+                <div class="card-header"><i class="bi bi-memory text-warning"></i> Thống kê RAM</div>
+                <div class="card-body p-2"><div class="chart-container"><canvas id="ramChart"></canvas></div></div>
             </div>
         </div>
     </div>
 
     <div class="row">
-        <!-- Form nhập liệu -->
-        <div class="col-lg-4 mb-4">
+        <!-- FORM NHẬP LIỆU -->
+        <div class="col-xl-4 col-lg-5 mb-4">
             <div class="card h-100" id="formCard">
-                <div class="card-header bg-primary text-white" id="formTitle">
-                    <i class="bi bi-pc-display"></i> Thêm PC mới
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center" id="formTitle">
+                    <span><i class="bi bi-plus-square"></i> Cập nhật / Thêm PC</span>
                 </div>
-                <div class="card-body">
+                <div class="card-body" style="max-height: 800px; overflow-y: auto;">
                     <form id="pcForm">
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Phòng / Khoa</label>
-                            <select class="form-select" id="department" required></select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Tên Máy / Mã PC</label>
-                            <input type="text" class="form-control" id="pcName" placeholder="VD: PC-VP-01" required>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-6">
-                                <label class="form-label fw-semibold">Windows</label>
-                                <select class="form-select mb-1" id="winVersion">
-                                    <option value="Windows 11">Windows 11</option>
-                                    <option value="Windows 10">Windows 10</option>
-                                    <option value="Windows 7">Windows 7</option>
-                                    <option value="Khác">Khác</option>
+                        <!-- SECTION 1: INFO -->
+                        <div class="section-title mt-0"><i class="bi bi-info-circle"></i> 1. Thông tin chung</div>
+                        <div class="row">
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Phân loại</label>
+                                <select class="form-select" id="category" onchange="updateDepartmentDropdown()">
+                                    <option value="Phòng">Các Phòng</option>
+                                    <option value="Khoa">Các Khoa</option>
+                                    <option value="Ban Giám Hiệu">Ban Giám Hiệu</option>
                                 </select>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="winLicense" checked>
-                                    <label class="form-check-label text-success fw-bold" style="font-size: 0.85rem;">Bản quyền</label>
-                                </div>
                             </div>
-                            <div class="col-6">
-                                <label class="form-label fw-semibold">Office</label>
-                                <select class="form-select mb-1" id="officeVersion">
-                                    <option value="Office 365">Office 365</option>
-                                    <option value="Office 2021">Office 2021</option>
-                                    <option value="Office 2019">Office 2019</option>
-                                    <option value="Office 2016">Office 2016</option>
-                                    <option value="Không có">Không có</option>
-                                </select>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="officeLicense">
-                                    <label class="form-check-label text-success fw-bold" style="font-size: 0.85rem;">Bản quyền</label>
-                                </div>
+                            <div class="col-md-6 mb-2">
+                                <label class="form-label">Đơn vị</label>
+                                <select class="form-select" id="department" required></select>
+                            </div>
+                            <div class="col-12 mb-2">
+                                <label class="form-label">Tên Máy (PC Name)</label>
+                                <input type="text" class="form-control" id="pcName" placeholder="VD: PC-NSG-01" required>
                             </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Các phần mềm khác cài thêm</label>
-                            <div id="softwareList"></div>
-                            <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="addSoftwareInput()">
-                                <i class="bi bi-plus-circle"></i> Thêm phần mềm
-                            </button>
+
+                        <!-- SECTION 2: HARDWARE -->
+                        <div class="section-title"><i class="bi bi-pc"></i> 2. Cấu hình phần cứng</div>
+                        <div class="hw-grid">
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <input type="text" class="form-control" id="hw_serialNumber" placeholder="Số Serial Mainboard (SerialNumber)">
+                                </div>
+                                <div class="col-6">
+                                    <input type="text" class="form-control" id="hw_manufacturer" placeholder="Hãng sản xuất (VD: Asus)">
+                                </div>
+                                <div class="col-6">
+                                    <input type="text" class="form-control" id="hw_product" placeholder="Mã Model Mainboard (VD: H610M)">
+                                </div>
+                                <div class="col-6">
+                                    <input type="text" class="form-control" id="hw_cpu" placeholder="CPU (VD: Core i5 12400F)">
+                                </div>
+                                <div class="col-6">
+                                    <input type="text" class="form-control" id="hw_ram" placeholder="RAM (VD: 16GB DDR4)">
+                                </div>
+                                <div class="col-6">
+                                    <input type="text" class="form-control" id="hw_storage" placeholder="Ổ cứng (VD: SSD 512GB)">
+                                </div>
+                                <div class="col-6">
+                                    <input type="text" class="form-control" id="hw_vga" placeholder="Card màn hình (VGA)">
+                                </div>
+                                <div class="col-6">
+                                    <input type="text" class="form-control" id="hw_monitor" placeholder="Màn hình (VD: Dell 24')">
+                                </div>
+                                <div class="col-12">
+                                    <input type="text" class="form-control" id="hw_psu" placeholder="Bộ nguồn PSU (VD: 550W)">
+                                </div>
+                            </div>
                         </div>
+
+                        <!-- SECTION 3: OS & OFFICE -->
+                        <div class="section-title"><i class="bi bi-shield-check"></i> 3. Windows & Office</div>
+                        <div class="row bg-light p-2 rounded mb-2 border">
+                            <div class="col-12 mb-2">
+                                <label class="form-label text-primary fw-bold">Hệ điều hành Windows</label>
+                                <div class="input-group input-group-sm">
+                                    <select class="form-select" id="winVersion" style="max-width: 130px;">
+                                        <option value="Windows 11">Win 11</option>
+                                        <option value="Windows 10">Win 10</option>
+                                        <option value="Khác">Khác</option>
+                                    </select>
+                                    <div class="input-group-text">
+                                        <input class="form-check-input mt-0 me-1" type="checkbox" id="winLicense" onchange="toggleDuration('win')" checked> B.Quyền
+                                    </div>
+                                    <input type="text" class="form-control" id="winDuration" placeholder="Thời hạn (VD: Vĩnh viễn)">
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label text-success fw-bold">Microsoft Office</label>
+                                <div class="input-group input-group-sm">
+                                    <select class="form-select" id="officeVersion" style="max-width: 130px;">
+                                        <option value="Office 365">O365</option>
+                                        <option value="Office 2021">O2021</option>
+                                        <option value="Office 2019">O2019</option>
+                                        <option value="Không có">Không</option>
+                                    </select>
+                                    <div class="input-group-text">
+                                        <input class="form-check-input mt-0 me-1" type="checkbox" id="officeLicense" onchange="toggleDuration('office')"> B.Quyền
+                                    </div>
+                                    <input type="text" class="form-control" id="officeDuration" placeholder="Thời hạn" disabled>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECTION 4: OTHER SOFTWARE -->
+                        <div class="section-title"><i class="bi bi-box-seam"></i> 4. Các phần mềm khác</div>
+                        <div id="softwareList"></div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary w-100 mb-3" onclick="addSoftwareInput()">
+                            <i class="bi bi-plus-circle"></i> Thêm phần mềm (Bản quyền / Free)
+                        </button>
                         
-                        <div class="d-flex gap-2 mt-4">
-                            <button type="submit" class="btn btn-primary flex-grow-1 fw-bold" id="btnSubmit">Lưu Lên Cloud</button>
+                        <!-- BUTTONS -->
+                        <div class="d-flex gap-2 sticky-bottom bg-white py-2 border-top">
+                            <button type="submit" class="btn btn-primary flex-grow-1 fw-bold shadow-sm" id="btnSubmit">Lưu Dữ Liệu</button>
                             <button type="button" class="btn btn-secondary d-none" id="btnCancel" onclick="cancelEdit()">Hủy</button>
                         </div>
                     </form>
@@ -132,47 +198,60 @@
             </div>
         </div>
 
-        <!-- Bảng dữ liệu -->
-        <div class="col-lg-8">
+        <!-- BẢNG DỮ LIỆU -->
+        <div class="col-xl-8 col-lg-7">
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <span><i class="bi bi-list-task"></i> Danh sách thiết bị</span>
-                    <button class="btn btn-sm btn-outline-danger" onclick="clearAllData()">
-                        <i class="bi bi-trash"></i> Xóa tất cả
-                    </button>
+                    <span><i class="bi bi-list-ul"></i> Danh sách Máy bộ PC</span>
                 </div>
-                <div class="card-body table-responsive">
-                    <table class="table table-hover table-bordered align-middle text-center">
-                        <thead>
+                <div class="card-body table-responsive p-0">
+                    <table class="table table-hover table-striped align-middle mb-0">
+                        <thead class="table-light">
                             <tr>
-                                <th class="text-start">Phòng/Khoa</th>
-                                <th class="text-start">Mã PC</th>
+                                <th>Phân loại</th>
+                                <th>Đơn vị</th>
+                                <th>Tên Máy</th>
+                                <th>Model & Serial</th>
                                 <th>Windows</th>
-                                <th>Office</th>
-                                <th class="text-start">Phần mềm khác</th>
-                                <th style="min-width: 90px;">Thao tác</th>
+                                <th class="text-center">Chi tiết</th>
+                                <th class="text-center">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody id="tableBody">
-                            <tr><td colspan="6" class="text-muted py-4">Đang tải dữ liệu từ Firebase...</td></tr>
+                            <tr><td colspan="7" class="text-center text-muted py-4">Đang tải dữ liệu...</td></tr>
                         </tbody>
                     </table>
-                    <div class="mt-2 text-muted" style="font-size: 0.85rem;">
-                        <b>Ghi chú:</b> <i class="bi bi-shield-check text-success"></i> Có bản quyền | <i class="bi bi-shield-x text-danger"></i> Chưa có bản quyền
-                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Sử dụng module để tương thích Firebase v9+ -->
-<script type="module">
-    // Import Firebase
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getDatabase, ref, set, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+<!-- MODAL CHI TIẾT PC -->
+<div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="modalPcName"><i class="bi bi-pc-display"></i> Chi tiết Máy</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="modalContent">
+        <!-- Dữ liệu render bằng JS -->
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-    // Cấu hình Firebase của bạn
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+
+<script>
+    // --- 1. FIREBASE CONFIG ---
     const firebaseConfig = {
       apiKey: "AIzaSyDi5gsOdE9tGOR6JQzMgw_9QscD-XBRNwk",
       authDomain: "alook-26a1f.firebaseapp.com",
@@ -180,59 +259,122 @@
       projectId: "alook-26a1f",
       storageBucket: "alook-26a1f.appspot.com",
       messagingSenderId: "201575321450",
-      appId: "1:201575321450:web:3f00cdd591af0d5e52df13",
-      measurementId: "G-M3GE3FVYTQ"
+      appId: "1:201575321450:web:3f00cdd591af0d5e52df13"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const dbRef = db.ref('pcHardwareNSG'); // Dùng Node mới để lưu cấu trúc mới tránh lỗi
+
+    // --- 2. DATA STRUCTURE & LOGIC ---
+    const orgStructure = {
+        "Phòng": ["Phòng Y Tế", "Phòng Kế Toán", "Phòng Đào Tạo với Trung Tâm Lái Xe", "Phòng Tổ Chức", "Phòng Khảo Thí", "Phòng CTHSSV", "Phòng KHCN", "Phòng QTTB", "Phòng Tuyển Sinh", "Phòng Bảo Vệ", "Đoàn Trường"],
+        "Khoa": ["Khoa Kinh Tế - Du Lịch", "Khoa CSSĐ-NDT", "Khoa GD ĐC", "Khoa Y Dược", "Khoa CNTT&KTĐ", "Khoa Cơ Khí"],
+        "Ban Giám Hiệu": ["Phòng Hiệu Trưởng", "Phòng Phó Hiệu Trưởng"]
     };
 
-    // Khởi tạo Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const dbRef = ref(db, 'pcDataList'); // Tên Node lưu dữ liệu trên Realtime Database
-
-    // Cấu hình UI
-    const departments = [
-        "Phòng Y Tế", "Phòng Kế Toán", "Phòng Đào Tạo với Trung Tâm Lái Xe", 
-        "Phòng Tổ Chức", "Phòng Khảo Thí", "Phòng CTHSSV", "Phòng KHCN", 
-        "Phòng QTTB", "Phòng Tuyển Sinh", "Khoa Kinh Tế - Du Lịch", 
-        "Khoa CSSĐ-NDT", "Khoa GD ĐC", "Khoa Y Dược", "Khoa CNTT&KTĐ", 
-        "Khoa Cơ Khí", "Đoàn Trường", "Phòng Phó Hiệu Trưởng", 
-        "Phòng Hiệu Trưởng", "Phòng Bảo Vệ"
-    ];
-
     let pcDataList = [];
-    let currentFilter = 'All', editingId = null;
-    let winChart, officeChart, licenseChart, softChart;
+    let editingId = null;
+    let charts = {};
 
-    function initDepartments() {
-        const formSelect = document.getElementById('department');
-        const filterSelect = document.getElementById('filterDepartment');
-        
-        departments.forEach(dept => {
-            formSelect.appendChild(new Option(dept, dept, false, dept === "Phòng QTTB"));
-            filterSelect.appendChild(new Option(dept, dept));
+    function updateDepartmentDropdown(selectedDept = null) {
+        const cat = document.getElementById('category').value;
+        const deptSelect = document.getElementById('department');
+        deptSelect.innerHTML = '';
+        orgStructure[cat].forEach(dept => {
+            deptSelect.add(new Option(dept, dept, false, dept === selectedDept));
         });
     }
 
-    // Đưa các function ra window object để gọi được từ HTML onclick
-    window.addSoftwareInput = function(name = '', isLicensed = false) {
-        const container = document.getElementById('softwareList');
-        const inputGroup = document.createElement('div');
-        inputGroup.className = 'input-group mb-2';
-        inputGroup.innerHTML = `
-            <input type="text" class="form-control soft-input" placeholder="Tên phần mềm..." value="${name}">
-            <div class="input-group-text bg-light" title="Có bản quyền">
-                <input class="form-check-input mt-0 soft-license" type="checkbox" ${isLicensed ? 'checked' : ''}>
-                <span class="ms-1 text-success fw-bold" style="font-size: 0.75rem;">BQ</span>
-            </div>
-            <button class="btn btn-outline-danger" type="button" onclick="this.parentElement.remove()"><i class="bi bi-x"></i></button>
-        `;
-        container.appendChild(inputGroup);
+    function toggleDuration(type) {
+        const isChecked = document.getElementById(type + 'License').checked;
+        const input = document.getElementById(type + 'Duration');
+        input.disabled = !isChecked;
+        if(!isChecked) input.value = '';
     }
 
-    document.getElementById('filterDepartment').addEventListener('change', e => {
-        currentFilter = e.target.value;
-        renderTable();
-        updateDashboard();
+    window.toggleSoftDuration = function(btn) {
+        const type = btn.value;
+        const input = btn.closest('.software-box').querySelector('.soft-duration');
+        if(type === 'Bản quyền') {
+            input.disabled = false;
+        } else {
+            input.disabled = true;
+            input.value = '';
+        }
+    }
+
+    window.addSoftwareInput = function(name = '', type = 'Free (Cho phép)', duration = '') {
+        const container = document.getElementById('softwareList');
+        const div = document.createElement('div');
+        div.className = 'software-box';
+        const isBq = type === 'Bản quyền';
+        div.innerHTML = `
+            <div class="d-flex justify-content-between mb-1">
+                <input type="text" class="form-control form-control-sm soft-name me-2" placeholder="Tên phần mềm (VD: AutoCAD)" value="${name}" required>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.software-box').remove()"><i class="bi bi-trash"></i></button>
+            </div>
+            <div class="input-group input-group-sm">
+                <select class="form-select soft-type" onchange="toggleSoftDuration(this)">
+                    <option value="Bản quyền" ${isBq ? 'selected' : ''}>Có Bản Quyền</option>
+                    <option value="Free (Cho phép)" ${!isBq ? 'selected' : ''}>Free (Cho phép)</option>
+                </select>
+                <input type="text" class="form-control soft-duration" placeholder="Thời hạn" value="${duration}" ${!isBq ? 'disabled' : ''}>
+            </div>
+        `;
+        container.appendChild(div);
+    }
+
+    // --- 3. CRUD THAO TÁC FIREBASE ---
+    document.getElementById('pcForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Thu thập Software
+        const softBoxes = document.querySelectorAll('.software-box');
+        const softwareArr = [];
+        softBoxes.forEach(box => {
+            const name = box.querySelector('.soft-name').value.trim();
+            if(name) {
+                softwareArr.push({
+                    name: name,
+                    type: box.querySelector('.soft-type').value,
+                    duration: box.querySelector('.soft-duration').value.trim()
+                });
+            }
+        });
+
+        const pcData = {
+            category: document.getElementById('category').value,
+            department: document.getElementById('department').value,
+            pcName: document.getElementById('pcName').value.trim(),
+            hardware: {
+                manufacturer: document.getElementById('hw_manufacturer').value.trim(),
+                product: document.getElementById('hw_product').value.trim(),
+                serialNumber: document.getElementById('hw_serialNumber').value.trim(),
+                cpu: document.getElementById('hw_cpu').value.trim(),
+                ram: document.getElementById('hw_ram').value.trim(),
+                storage: document.getElementById('hw_storage').value.trim(),
+                vga: document.getElementById('hw_vga').value.trim(),
+                monitor: document.getElementById('hw_monitor').value.trim(),
+                psu: document.getElementById('hw_psu').value.trim(),
+            },
+            os: {
+                name: document.getElementById('winVersion').value,
+                isLicensed: document.getElementById('winLicense').checked,
+                duration: document.getElementById('winDuration').value.trim()
+            },
+            office: {
+                name: document.getElementById('officeVersion').value,
+                isLicensed: document.getElementById('officeLicense').checked,
+                duration: document.getElementById('officeDuration').value.trim()
+            },
+            software: softwareArr
+        };
+
+        if(editingId) {
+            db.ref('pcHardwareNSG/' + editingId).update(pcData).then(() => cancelEdit());
+        } else {
+            dbRef.push(pcData).then(() => cancelEdit());
+        }
     });
 
     window.editPC = function(id) {
@@ -240,22 +382,42 @@
         if(!pc) return;
         editingId = id;
         
-        document.getElementById('department').value = pc.department;
-        document.getElementById('pcName').value = pc.name;
-        document.getElementById('winVersion').value = pc.windows;
-        document.getElementById('winLicense').checked = pc.winLicense;
-        document.getElementById('officeVersion').value = pc.office;
-        document.getElementById('officeLicense').checked = pc.officeLicense;
+        document.getElementById('category').value = pc.category;
+        updateDepartmentDropdown(pc.department);
+        document.getElementById('pcName').value = pc.pcName;
+        
+        // Hardwares
+        const hw = pc.hardware || {};
+        document.getElementById('hw_manufacturer').value = hw.manufacturer || '';
+        document.getElementById('hw_product').value = hw.product || '';
+        document.getElementById('hw_serialNumber').value = hw.serialNumber || '';
+        document.getElementById('hw_cpu').value = hw.cpu || '';
+        document.getElementById('hw_ram').value = hw.ram || '';
+        document.getElementById('hw_storage').value = hw.storage || '';
+        document.getElementById('hw_vga').value = hw.vga || '';
+        document.getElementById('hw_monitor').value = hw.monitor || '';
+        document.getElementById('hw_psu').value = hw.psu || '';
 
-        const softwareContainer = document.getElementById('softwareList');
-        softwareContainer.innerHTML = '';
+        // OS
+        document.getElementById('winVersion').value = pc.os.name;
+        document.getElementById('winLicense').checked = pc.os.isLicensed;
+        document.getElementById('winDuration').value = pc.os.duration || '';
+        toggleDuration('win');
+
+        // Office
+        document.getElementById('officeVersion').value = pc.office.name;
+        document.getElementById('officeLicense').checked = pc.office.isLicensed;
+        document.getElementById('officeDuration').value = pc.office.duration || '';
+        toggleDuration('office');
+
+        // Software
+        document.getElementById('softwareList').innerHTML = '';
         if(pc.software && pc.software.length > 0) {
-            pc.software.forEach(soft => window.addSoftwareInput(soft.name, soft.license));
-        } else {
-            window.addSoftwareInput(); 
+            pc.software.forEach(s => addSoftwareInput(s.name, s.type, s.duration));
         }
 
-        document.getElementById('formTitle').innerHTML = '<i class="bi bi-pencil-square"></i> Cập nhật thông tin PC';
+        // UI Updates
+        document.getElementById('formTitle').innerHTML = '<span><i class="bi bi-pencil-square"></i> Cập nhật PC</span>';
         document.getElementById('formTitle').classList.replace('bg-primary', 'bg-warning');
         document.getElementById('formTitle').classList.replace('text-white', 'text-dark');
         document.getElementById('btnSubmit').textContent = 'Cập nhật Cloud';
@@ -266,175 +428,185 @@
 
     window.cancelEdit = function() {
         editingId = null;
-        const currentDept = document.getElementById('department').value;
         document.getElementById('pcForm').reset();
-        document.getElementById('department').value = currentDept;
+        document.getElementById('category').value = 'Phòng';
+        updateDepartmentDropdown();
         document.getElementById('softwareList').innerHTML = '';
-        window.addSoftwareInput();
+        toggleDuration('win'); toggleDuration('office');
 
-        document.getElementById('formTitle').innerHTML = '<i class="bi bi-pc-display"></i> Thêm PC mới';
+        document.getElementById('formTitle').innerHTML = '<span><i class="bi bi-plus-square"></i> Thêm PC mới</span>';
         document.getElementById('formTitle').classList.replace('bg-warning', 'bg-primary');
         document.getElementById('formTitle').classList.replace('text-dark', 'text-white');
-        document.getElementById('btnSubmit').textContent = 'Lưu Lên Cloud';
+        document.getElementById('btnSubmit').textContent = 'Lưu Dữ Liệu';
         document.getElementById('btnSubmit').classList.replace('btn-warning', 'btn-primary');
         document.getElementById('btnCancel').classList.add('d-none');
     }
 
-    // GHI DỮ LIỆU LÊN FIREBASE
-    document.getElementById('pcForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const rows = document.getElementById('softwareList').children;
-        const otherSoft = [];
-        for(let row of rows) {
-            const name = row.querySelector('.soft-input').value.trim();
-            const isLicensed = row.querySelector('.soft-license').checked;
-            if(name !== "") otherSoft.push({ name: name, license: isLicensed });
-        }
-
-        const pcData = {
-            department: document.getElementById('department').value,
-            name: document.getElementById('pcName').value.trim(),
-            windows: document.getElementById('winVersion').value,
-            winLicense: document.getElementById('winLicense').checked,
-            office: document.getElementById('officeVersion').value,
-            officeLicense: document.getElementById('officeLicense').checked,
-            software: otherSoft
-        };
-
-        if(editingId) {
-            // Update node
-            update(ref(db, 'pcDataList/' + editingId), pcData).then(() => window.cancelEdit());
-        } else {
-            // Push new node
-            push(dbRef, pcData).then(() => window.cancelEdit());
-        }
-    });
-
     window.deletePC = function(id) {
-        if(confirm('Bạn có chắc chắn muốn xóa PC này khỏi hệ thống Cloud?')) {
-            remove(ref(db, 'pcDataList/' + id));
-            if(editingId === id) window.cancelEdit();
+        if(confirm('Bạn có chắc chắn muốn xóa hệ thống PC này khỏi danh sách?')) {
+            db.ref('pcHardwareNSG/' + id).remove();
+            if(editingId === id) cancelEdit();
         }
     }
 
-    window.clearAllData = function() {
-        if(confirm('CẢNH BÁO QUAN TRỌNG: Thao tác này sẽ xóa sạch toàn bộ dữ liệu trên Firebase. Chắc chắn tiếp tục?')) {
-            remove(dbRef);
-            window.cancelEdit();
-        }
-    }
-
-    // ĐỌC DỮ LIỆU TỪ FIREBASE (REAL-TIME LISTENER)
-    onValue(dbRef, (snapshot) => {
+    // --- 4. RENDER DỮ LIỆU & MODAL ---
+    dbRef.on('value', (snapshot) => {
         pcDataList = [];
         const data = snapshot.val();
         if (data) {
-            // Chuyển object Firebase thành array để dễ xử lý
             Object.keys(data).forEach(key => {
-                pcDataList.push({
-                    id: key,
-                    ...data[key],
-                    software: data[key].software || [] // Fallback nếu không có software
-                });
+                pcDataList.push({ id: key, ...data[key], software: data[key].software || [] });
             });
         }
         renderTable();
         updateDashboard();
     });
 
-    function getFilteredData() {
-        return currentFilter === 'All' ? pcDataList : pcDataList.filter(pc => pc.department === currentFilter);
-    }
+    document.getElementById('filterCategory').addEventListener('change', renderTable);
 
     function renderTable() {
+        const filter = document.getElementById('filterCategory').value;
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '';
-        const dataToRender = getFilteredData();
+        
+        let data = pcDataList;
+        if(filter !== 'All') data = data.filter(pc => pc.category === filter);
 
-        if(dataToRender.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-muted py-4">Chưa có dữ liệu trên hệ thống.</td></tr>'; return;
+        if(data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4">Chưa có dữ liệu</td></tr>'; return;
         }
 
-        dataToRender.forEach(pc => {
-            const winIcon = pc.winLicense ? '<i class="bi bi-shield-check text-success lic-icon" title="Có bản quyền"></i>' : '<i class="bi bi-shield-x text-danger lic-icon" title="Chưa bản quyền"></i>';
-            let officeIcon = '';
-            if(pc.office !== 'Không có') {
-                officeIcon = pc.officeLicense ? '<i class="bi bi-shield-check text-success lic-icon" title="Có bản quyền"></i>' : '<i class="bi bi-shield-x text-danger lic-icon" title="Chưa bản quyền"></i>';
-            }
-
-            const softHtml = pc.software.map(s => {
-                const sIcon = s.license ? '<i class="bi bi-check-circle-fill text-success" style="font-size:0.75rem;"></i>' : '<i class="bi bi-x-circle-fill text-danger" style="font-size:0.75rem;"></i>';
-                return `<span class="badge border border-secondary text-secondary me-1 mb-1 d-inline-block text-wrap text-start">${s.name} ${sIcon}</span>`;
-            }).join('');
-
+        data.forEach(pc => {
+            const winIcon = pc.os.isLicensed ? '<i class="bi bi-shield-check text-success"></i>' : '<i class="bi bi-shield-x text-danger"></i>';
+            let catBadge = pc.category === 'Ban Giám Hiệu' ? 'bg-danger' : (pc.category === 'Khoa' ? 'bg-info text-dark' : 'bg-secondary');
+            const hw = pc.hardware || {};
+            
             tbody.innerHTML += `
                 <tr>
-                    <td class="text-start text-secondary" style="font-size: 0.9rem;">${pc.department}</td>
-                    <td class="text-start fw-bold text-primary">${pc.name}</td>
-                    <td><span class="badge bg-info text-dark">${pc.windows}</span> ${winIcon}</td>
-                    <td><span class="badge bg-secondary">${pc.office}</span> ${officeIcon}</td>
-                    <td class="text-start">${softHtml}</td>
+                    <td><span class="badge ${catBadge}">${pc.category}</span></td>
+                    <td>${pc.department}</td>
+                    <td class="fw-bold text-primary">${pc.pcName}</td>
                     <td>
-                        <div class="d-flex justify-content-center gap-1">
-                            <button class="btn btn-sm btn-warning" onclick="editPC('${pc.id}')"><i class="bi bi-pencil"></i></button>
-                            <button class="btn btn-sm btn-danger" onclick="deletePC('${pc.id}')"><i class="bi bi-trash"></i></button>
-                        </div>
+                        <div class="text-dark small fw-semibold">${hw.product || 'N/A'}</div>
+                        <div class="text-muted font-monospace" style="font-size: 0.75rem;">SN: ${hw.serialNumber || 'N/A'}</div>
+                    </td>
+                    <td>${pc.os.name} ${winIcon}</td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-outline-primary" onclick="showDetail('${pc.id}')">
+                            <i class="bi bi-eye"></i> Chi tiết
+                        </button>
+                    </td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-warning mb-1" onclick="editPC('${pc.id}')"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-danger mb-1" onclick="deletePC('${pc.id}')"><i class="bi bi-trash"></i></button>
                     </td>
                 </tr>
             `;
         });
     }
 
-    function updateDashboard() {
-        const data = getFilteredData();
-        const winCount = {}, officeCount = {}, softCount = {};
-        let winLic = 0, winUnlic = 0, offLic = 0, offUnlic = 0;
-
-        data.forEach(pc => {
-            winCount[pc.windows] = (winCount[pc.windows] || 0) + 1;
-            pc.winLicense ? winLic++ : winUnlic++;
-            
-            if(pc.office !== 'Không có') {
-                officeCount[pc.office] = (officeCount[pc.office] || 0) + 1;
-                pc.officeLicense ? offLic++ : offUnlic++;
-            }
-            
-            pc.software.forEach(soft => {
-                const n = soft.name.toUpperCase(); 
-                softCount[n] = (softCount[n] || 0) + 1;
-            });
-        });
-
-        if(winChart) winChart.destroy(); if(officeChart) officeChart.destroy(); 
-        if(licenseChart) licenseChart.destroy(); if(softChart) softChart.destroy();
-
-        const emptyConfig = { type: 'doughnut', data: { labels: ['Trống'], datasets: [{ data: [1], backgroundColor: ['#e9ecef'] }] }, options: { plugins: { tooltip: { enabled: false } } } };
-
-        winChart = new Chart(document.getElementById('winChart'), Object.keys(winCount).length > 0 ? { type: 'doughnut', data: { labels: Object.keys(winCount), datasets: [{ data: Object.values(winCount), backgroundColor: ['#0d6efd', '#6610f2', '#0dcaf0', '#adb5bd'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } } : emptyConfig);
+    // HIỆN POPUP CHI TIẾT
+    window.showDetail = function(id) {
+        const pc = pcDataList.find(p => p.id === id);
+        if(!pc) return;
         
-        officeChart = new Chart(document.getElementById('officeChart'), Object.keys(officeCount).length > 0 ? { type: 'pie', data: { labels: Object.keys(officeCount), datasets: [{ data: Object.values(officeCount), backgroundColor: ['#fd7e14', '#ffc107', '#198754', '#20c997'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } } : emptyConfig);
+        document.getElementById('modalPcName').innerHTML = `<i class="bi bi-pc-display"></i> Thông tin: ${pc.pcName} - ${pc.department}`;
+        
+        const hw = pc.hardware || {};
+        let softHtml = '';
+        if(pc.software.length > 0) {
+            softHtml = pc.software.map(s => {
+                let badge = s.type === 'Bản quyền' ? 'bg-success' : 'bg-secondary';
+                let dur = s.type === 'Bản quyền' ? `(HSD: ${s.duration || 'N/A'})` : '';
+                return `<li><b>${s.name}</b> <span class="badge ${badge}">${s.type}</span> <small class="text-muted">${dur}</small></li>`;
+            }).join('');
+        } else {
+            softHtml = '<li><i>Không cài phần mềm phụ</i></li>';
+        }
 
-        licenseChart = new Chart(document.getElementById('licenseChart'), {
-            type: 'bar',
-            data: {
-                labels: ['Windows', 'Office'],
-                datasets: [
-                    { label: 'Có bản quyền', data: [winLic, offLic], backgroundColor: '#198754' },
-                    { label: 'Chưa bản quyền', data: [winUnlic, offUnlic], backgroundColor: '#dc3545' }
-                ]
-            },
-            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
-        });
-
-        const sortedSoft = Object.entries(softCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
-        softChart = new Chart(document.getElementById('softwareChart'), sortedSoft.length > 0 ? { type: 'bar', data: { labels: sortedSoft.map(i => i[0]), datasets: [{ label: 'Số máy', data: sortedSoft.map(i => i[1]), backgroundColor: '#6c757d' }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } } } : emptyConfig);
+        const html = `
+            <div class="row">
+                <div class="col-md-6 border-end">
+                    <h6 class="text-primary border-bottom pb-2"><i class="bi bi-cpu"></i> Cấu hình Phần cứng</h6>
+                    <div class="detail-row"><span class="detail-label">Hãng SX Mainboard:</span> <span class="detail-value">${hw.manufacturer || 'Trống'}</span></div>
+                    <div class="detail-row"><span class="detail-label">Model Mainboard:</span> <span class="detail-value">${hw.product || 'Trống'}</span></div>
+                    <div class="detail-row"><span class="detail-label">Số Serial:</span> <span class="detail-value font-monospace">${hw.serialNumber || 'Trống'}</span></div>
+                    <div class="detail-row"><span class="detail-label">CPU:</span> <span class="detail-value">${hw.cpu || 'Trống'}</span></div>
+                    <div class="detail-row"><span class="detail-label">RAM:</span> <span class="detail-value text-danger fw-bold">${hw.ram || 'Trống'}</span></div>
+                    <div class="detail-row"><span class="detail-label">Ổ cứng:</span> <span class="detail-value">${hw.storage || 'Trống'}</span></div>
+                    <div class="detail-row"><span class="detail-label">VGA:</span> <span class="detail-value">${hw.vga || 'Trống'}</span></div>
+                    <div class="detail-row"><span class="detail-label">Màn hình:</span> <span class="detail-value">${hw.monitor || 'Trống'}</span></div>
+                    <div class="detail-row border-0"><span class="detail-label">Nguồn (PSU):</span> <span class="detail-value">${hw.psu || 'Trống'}</span></div>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-success border-bottom pb-2"><i class="bi bi-windows"></i> Phần mềm & Bản quyền</h6>
+                    <div class="detail-row">
+                        <span class="detail-label">Windows:</span> 
+                        <span class="detail-value">${pc.os.name}</span>
+                        ${pc.os.isLicensed ? `<span class="badge bg-success ms-1">Có B.Quyền</span> <br><small class="text-muted">HSD: ${pc.os.duration || 'N/A'}</small>` : '<span class="badge bg-danger ms-1">Chưa B.Quyền</span>'}
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Office:</span> 
+                        <span class="detail-value">${pc.office.name}</span>
+                        ${pc.office.name !== 'Không có' ? (pc.office.isLicensed ? `<span class="badge bg-success ms-1">Có B.Quyền</span> <br><small class="text-muted">HSD: ${pc.office.duration || 'N/A'}</small>` : '<span class="badge bg-danger ms-1">Chưa B.Quyền</span>') : ''}
+                    </div>
+                    <div class="mt-3">
+                        <span class="detail-label">Phần mềm khác:</span>
+                        <ul class="mt-1" style="padding-left: 1.5rem; font-size: 0.9rem;">
+                            ${softHtml}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('modalContent').innerHTML = html;
+        new bootstrap.Modal(document.getElementById('detailModal')).show();
     }
 
-    // Khởi tạo giao diện ban đầu
-    initDepartments(); 
-    window.addSoftwareInput(); 
+    // --- 5. DASHBOARD CHARTS ---
+    function initChart(id, type, labels, dataArr, bgColors) {
+        if(charts[id]) charts[id].destroy();
+        const ctx = document.getElementById(id).getContext('2d');
+        if(labels.length === 0) {
+            charts[id] = new Chart(ctx, { type: 'doughnut', data: { labels: ['Trống'], datasets: [{ data: [1], backgroundColor: ['#e9ecef'] }] }, options: { plugins: { tooltip: { enabled: false } } } });
+            return;
+        }
+        charts[id] = new Chart(ctx, {
+            type: type,
+            data: { labels: labels, datasets: [{ data: dataArr, backgroundColor: bgColors }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: type === 'bar' ? 'none' : 'bottom', labels: { boxWidth: 12 } } }, scales: type === 'bar' ? { y: { beginAtZero: true, ticks: { stepSize: 1 } } } : {} }
+        });
+    }
 
+    function updateDashboard() {
+        const catCount = { "Ban Giám Hiệu":0, "Phòng":0, "Khoa":0 };
+        const winLic = { "Có BQ":0, "Không BQ":0 };
+        const offLic = { "Có BQ":0, "Không BQ":0 };
+        const ramCount = {}; // Trích xuất chữ GB để đếm
+
+        pcDataList.forEach(pc => {
+            catCount[pc.category]++;
+            pc.os.isLicensed ? winLic["Có BQ"]++ : winLic["Không BQ"]++;
+            if(pc.office.name !== 'Không có') pc.office.isLicensed ? offLic["Có BQ"]++ : offLic["Không BQ"]++;
+            
+            // Xử lý thống kê RAM (Rút gọn)
+            if(pc.hardware && pc.hardware.ram) {
+                let r = pc.hardware.ram.toUpperCase();
+                let key = r.includes('32GB') ? '32GB' : (r.includes('16GB') ? '16GB' : (r.includes('8GB') ? '8GB' : (r.includes('4GB') ? '4GB' : 'Khác')));
+                ramCount[key] = (ramCount[key] || 0) + 1;
+            }
+        });
+
+        initChart('categoryChart', 'pie', Object.keys(catCount).filter(k=>catCount[k]>0), Object.values(catCount).filter(v=>v>0), ['#dc3545', '#6c757d', '#0dcaf0']);
+        initChart('winChart', 'doughnut', Object.keys(winLic).filter(k=>winLic[k]>0), Object.values(winLic).filter(v=>v>0), ['#198754', '#dc3545']);
+        initChart('officeChart', 'doughnut', Object.keys(offLic).filter(k=>offLic[k]>0), Object.values(offLic).filter(v=>v>0), ['#198754', '#dc3545']);
+        
+        const sortedRam = Object.entries(ramCount).sort((a,b) => b[1] - a[1]);
+        initChart('ramChart', 'bar', sortedRam.map(i=>i[0]), sortedRam.map(i=>i[1]), ['#ffc107', '#fd7e14', '#20c997', '#0d6efd']);
+    }
+
+    // Khởi tạo
+    updateDepartmentDropdown();
 </script>
 </body>
 </html>
