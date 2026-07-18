@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <!-- Meta viewport rất quan trọng để hiển thị chuẩn trên giao diện điện thoại -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dashboard Quản Lý PC - Firebase</title>
+    
+    <!-- Bootstrap 5 & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        body { background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card { box-shadow: 0 4px 6px rgba(0,0,0,0.04); border: none; margin-bottom: 20px; border-radius: 8px; }
+        .card-header { background-color: #fff; font-weight: bold; border-bottom: 1px solid #f0f0f0; border-radius: 8px 8px 0 0 !important; color: #333; }
+        .chart-container { position: relative; height: 250px; width: 100%; }
+        .table th { background-color: #f8f9fa; white-space: nowrap; }
+        .lic-icon { font-size: 1.1rem; margin-left: 4px; vertical-align: middle; }
+        
+        /* Tối ưu riêng cho màn hình điện thoại */
+        @media (max-width: 768px) {
+            .header-action { flex-direction: column; align-items: stretch !important; gap: 15px; }
+            .header-action select { width: 100%; }
+            .table-responsive { border: 1px solid #dee2e6; border-radius: 8px; }
+            .badge { font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid py-3 px-3 py-md-4 px-md-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 header-action">
+        <h4 class="text-primary fw-bold m-0"><i class="bi bi-cloud-check"></i> Quản Lý Bản Quyền Phần Mềm</h4>
+        <div class="d-flex align-items-center w-sm-100">
+            <label class="fw-bold me-2 text-nowrap d-none d-md-block"><i class="bi bi-funnel"></i> Lọc:</label>
+            <select class="form-select border-primary" id="filterDepartment">
+                <option value="All">Tất cả Phòng / Khoa</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Khu vực Biểu đồ -->
+    <div class="row">
+        <div class="col-md-6 col-lg-3">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-windows text-primary"></i> Windows</div>
+                <div class="card-body"><div class="chart-container"><canvas id="winChart"></canvas></div></div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-file-earmark-word text-success"></i> Office</div>
+                <div class="card-body"><div class="chart-container"><canvas id="officeChart"></canvas></div></div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white"><i class="bi bi-shield-check"></i> Báo cáo Bản Quyền</div>
+                <div class="card-body"><div class="chart-container"><canvas id="licenseChart"></canvas></div></div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="card">
+                <div class="card-header"><i class="bi bi-box-seam text-warning"></i> Top 5 Phần mềm</div>
+                <div class="card-body"><div class="chart-container"><canvas id="softwareChart"></canvas></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Form nhập liệu -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100" id="formCard">
+                <div class="card-header bg-primary text-white" id="formTitle">
+                    <i class="bi bi-pc-display"></i> Thêm PC mới
+                </div>
+                <div class="card-body">
+                    <form id="pcForm">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Phòng / Khoa</label>
+                            <select class="form-select" id="department" required></select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Tên Máy / Mã PC</label>
+                            <input type="text" class="form-control" id="pcName" placeholder="VD: PC-VP-01" required>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">Windows</label>
+                                <select class="form-select mb-1" id="winVersion">
+                                    <option value="Windows 11">Windows 11</option>
+                                    <option value="Windows 10">Windows 10</option>
+                                    <option value="Windows 7">Windows 7</option>
+                                    <option value="Khác">Khác</option>
+                                </select>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="winLicense" checked>
+                                    <label class="form-check-label text-success fw-bold" style="font-size: 0.85rem;">Bản quyền</label>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">Office</label>
+                                <select class="form-select mb-1" id="officeVersion">
+                                    <option value="Office 365">Office 365</option>
+                                    <option value="Office 2021">Office 2021</option>
+                                    <option value="Office 2019">Office 2019</option>
+                                    <option value="Office 2016">Office 2016</option>
+                                    <option value="Không có">Không có</option>
+                                </select>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="officeLicense">
+                                    <label class="form-check-label text-success fw-bold" style="font-size: 0.85rem;">Bản quyền</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Các phần mềm khác cài thêm</label>
+                            <div id="softwareList"></div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="addSoftwareInput()">
+                                <i class="bi bi-plus-circle"></i> Thêm phần mềm
+                            </button>
+                        </div>
+                        
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary flex-grow-1 fw-bold" id="btnSubmit">Lưu Lên Cloud</button>
+                            <button type="button" class="btn btn-secondary d-none" id="btnCancel" onclick="cancelEdit()">Hủy</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bảng dữ liệu -->
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-list-task"></i> Danh sách thiết bị</span>
+                    <button class="btn btn-sm btn-outline-danger" onclick="clearAllData()">
+                        <i class="bi bi-trash"></i> Xóa tất cả
+                    </button>
+                </div>
+                <div class="card-body table-responsive">
+                    <table class="table table-hover table-bordered align-middle text-center">
+                        <thead>
+                            <tr>
+                                <th class="text-start">Phòng/Khoa</th>
+                                <th class="text-start">Mã PC</th>
+                                <th>Windows</th>
+                                <th>Office</th>
+                                <th class="text-start">Phần mềm khác</th>
+                                <th style="min-width: 90px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <tr><td colspan="6" class="text-muted py-4">Đang tải dữ liệu từ Firebase...</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="mt-2 text-muted" style="font-size: 0.85rem;">
+                        <b>Ghi chú:</b> <i class="bi bi-shield-check text-success"></i> Có bản quyền | <i class="bi bi-shield-x text-danger"></i> Chưa có bản quyền
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sử dụng module để tương thích Firebase v9+ -->
+<script type="module">
+    // Import Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getDatabase, ref, set, push, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+    // Cấu hình Firebase của bạn
+    const firebaseConfig = {
+      apiKey: "AIzaSyDi5gsOdE9tGOR6JQzMgw_9QscD-XBRNwk",
+      authDomain: "alook-26a1f.firebaseapp.com",
+      databaseURL: "https://alook-26a1f-default-rtdb.firebaseio.com",
+      projectId: "alook-26a1f",
+      storageBucket: "alook-26a1f.appspot.com",
+      messagingSenderId: "201575321450",
+      appId: "1:201575321450:web:3f00cdd591af0d5e52df13",
+      measurementId: "G-M3GE3FVYTQ"
+    };
+
+    // Khởi tạo Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const dbRef = ref(db, 'pcDataList'); // Tên Node lưu dữ liệu trên Realtime Database
+
+    // Cấu hình UI
+    const departments = [
+        "Phòng Y Tế", "Phòng Kế Toán", "Phòng Đào Tạo với Trung Tâm Lái Xe", 
+        "Phòng Tổ Chức", "Phòng Khảo Thí", "Phòng CTHSSV", "Phòng KHCN", 
+        "Phòng QTTB", "Phòng Tuyển Sinh", "Khoa Kinh Tế - Du Lịch", 
+        "Khoa CSSĐ-NDT", "Khoa GD ĐC", "Khoa Y Dược", "Khoa CNTT&KTĐ", 
+        "Khoa Cơ Khí", "Đoàn Trường", "Phòng Phó Hiệu Trưởng", 
+        "Phòng Hiệu Trưởng", "Phòng Bảo Vệ"
+    ];
+
+    let pcDataList = [];
+    let currentFilter = 'All', editingId = null;
+    let winChart, officeChart, licenseChart, softChart;
+
+    function initDepartments() {
+        const formSelect = document.getElementById('department');
+        const filterSelect = document.getElementById('filterDepartment');
+        
+        departments.forEach(dept => {
+            formSelect.appendChild(new Option(dept, dept, false, dept === "Phòng QTTB"));
+            filterSelect.appendChild(new Option(dept, dept));
+        });
+    }
+
+    // Đưa các function ra window object để gọi được từ HTML onclick
+    window.addSoftwareInput = function(name = '', isLicensed = false) {
+        const container = document.getElementById('softwareList');
+        const inputGroup = document.createElement('div');
+        inputGroup.className = 'input-group mb-2';
+        inputGroup.innerHTML = `
+            <input type="text" class="form-control soft-input" placeholder="Tên phần mềm..." value="${name}">
+            <div class="input-group-text bg-light" title="Có bản quyền">
+                <input class="form-check-input mt-0 soft-license" type="checkbox" ${isLicensed ? 'checked' : ''}>
+                <span class="ms-1 text-success fw-bold" style="font-size: 0.75rem;">BQ</span>
+            </div>
+            <button class="btn btn-outline-danger" type="button" onclick="this.parentElement.remove()"><i class="bi bi-x"></i></button>
+        `;
+        container.appendChild(inputGroup);
+    }
+
+    document.getElementById('filterDepartment').addEventListener('change', e => {
+        currentFilter = e.target.value;
+        renderTable();
+        updateDashboard();
+    });
+
+    window.editPC = function(id) {
+        const pc = pcDataList.find(item => item.id === id);
+        if(!pc) return;
+        editingId = id;
+        
+        document.getElementById('department').value = pc.department;
+        document.getElementById('pcName').value = pc.name;
+        document.getElementById('winVersion').value = pc.windows;
+        document.getElementById('winLicense').checked = pc.winLicense;
+        document.getElementById('officeVersion').value = pc.office;
+        document.getElementById('officeLicense').checked = pc.officeLicense;
+
+        const softwareContainer = document.getElementById('softwareList');
+        softwareContainer.innerHTML = '';
+        if(pc.software && pc.software.length > 0) {
+            pc.software.forEach(soft => window.addSoftwareInput(soft.name, soft.license));
+        } else {
+            window.addSoftwareInput(); 
+        }
+
+        document.getElementById('formTitle').innerHTML = '<i class="bi bi-pencil-square"></i> Cập nhật thông tin PC';
+        document.getElementById('formTitle').classList.replace('bg-primary', 'bg-warning');
+        document.getElementById('formTitle').classList.replace('text-white', 'text-dark');
+        document.getElementById('btnSubmit').textContent = 'Cập nhật Cloud';
+        document.getElementById('btnSubmit').classList.replace('btn-primary', 'btn-warning');
+        document.getElementById('btnCancel').classList.remove('d-none');
+        document.getElementById('formCard').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    window.cancelEdit = function() {
+        editingId = null;
+        const currentDept = document.getElementById('department').value;
+        document.getElementById('pcForm').reset();
+        document.getElementById('department').value = currentDept;
+        document.getElementById('softwareList').innerHTML = '';
+        window.addSoftwareInput();
+
+        document.getElementById('formTitle').innerHTML = '<i class="bi bi-pc-display"></i> Thêm PC mới';
+        document.getElementById('formTitle').classList.replace('bg-warning', 'bg-primary');
+        document.getElementById('formTitle').classList.replace('text-dark', 'text-white');
+        document.getElementById('btnSubmit').textContent = 'Lưu Lên Cloud';
+        document.getElementById('btnSubmit').classList.replace('btn-warning', 'btn-primary');
+        document.getElementById('btnCancel').classList.add('d-none');
+    }
+
+    // GHI DỮ LIỆU LÊN FIREBASE
+    document.getElementById('pcForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const rows = document.getElementById('softwareList').children;
+        const otherSoft = [];
+        for(let row of rows) {
+            const name = row.querySelector('.soft-input').value.trim();
+            const isLicensed = row.querySelector('.soft-license').checked;
+            if(name !== "") otherSoft.push({ name: name, license: isLicensed });
+        }
+
+        const pcData = {
+            department: document.getElementById('department').value,
+            name: document.getElementById('pcName').value.trim(),
+            windows: document.getElementById('winVersion').value,
+            winLicense: document.getElementById('winLicense').checked,
+            office: document.getElementById('officeVersion').value,
+            officeLicense: document.getElementById('officeLicense').checked,
+            software: otherSoft
+        };
+
+        if(editingId) {
+            // Update node
+            update(ref(db, 'pcDataList/' + editingId), pcData).then(() => window.cancelEdit());
+        } else {
+            // Push new node
+            push(dbRef, pcData).then(() => window.cancelEdit());
+        }
+    });
+
+    window.deletePC = function(id) {
+        if(confirm('Bạn có chắc chắn muốn xóa PC này khỏi hệ thống Cloud?')) {
+            remove(ref(db, 'pcDataList/' + id));
+            if(editingId === id) window.cancelEdit();
+        }
+    }
+
+    window.clearAllData = function() {
+        if(confirm('CẢNH BÁO QUAN TRỌNG: Thao tác này sẽ xóa sạch toàn bộ dữ liệu trên Firebase. Chắc chắn tiếp tục?')) {
+            remove(dbRef);
+            window.cancelEdit();
+        }
+    }
+
+    // ĐỌC DỮ LIỆU TỪ FIREBASE (REAL-TIME LISTENER)
+    onValue(dbRef, (snapshot) => {
+        pcDataList = [];
+        const data = snapshot.val();
+        if (data) {
+            // Chuyển object Firebase thành array để dễ xử lý
+            Object.keys(data).forEach(key => {
+                pcDataList.push({
+                    id: key,
+                    ...data[key],
+                    software: data[key].software || [] // Fallback nếu không có software
+                });
+            });
+        }
+        renderTable();
+        updateDashboard();
+    });
+
+    function getFilteredData() {
+        return currentFilter === 'All' ? pcDataList : pcDataList.filter(pc => pc.department === currentFilter);
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        const dataToRender = getFilteredData();
+
+        if(dataToRender.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-muted py-4">Chưa có dữ liệu trên hệ thống.</td></tr>'; return;
+        }
+
+        dataToRender.forEach(pc => {
+            const winIcon = pc.winLicense ? '<i class="bi bi-shield-check text-success lic-icon" title="Có bản quyền"></i>' : '<i class="bi bi-shield-x text-danger lic-icon" title="Chưa bản quyền"></i>';
+            let officeIcon = '';
+            if(pc.office !== 'Không có') {
+                officeIcon = pc.officeLicense ? '<i class="bi bi-shield-check text-success lic-icon" title="Có bản quyền"></i>' : '<i class="bi bi-shield-x text-danger lic-icon" title="Chưa bản quyền"></i>';
+            }
+
+            const softHtml = pc.software.map(s => {
+                const sIcon = s.license ? '<i class="bi bi-check-circle-fill text-success" style="font-size:0.75rem;"></i>' : '<i class="bi bi-x-circle-fill text-danger" style="font-size:0.75rem;"></i>';
+                return `<span class="badge border border-secondary text-secondary me-1 mb-1 d-inline-block text-wrap text-start">${s.name} ${sIcon}</span>`;
+            }).join('');
+
+            tbody.innerHTML += `
+                <tr>
+                    <td class="text-start text-secondary" style="font-size: 0.9rem;">${pc.department}</td>
+                    <td class="text-start fw-bold text-primary">${pc.name}</td>
+                    <td><span class="badge bg-info text-dark">${pc.windows}</span> ${winIcon}</td>
+                    <td><span class="badge bg-secondary">${pc.office}</span> ${officeIcon}</td>
+                    <td class="text-start">${softHtml}</td>
+                    <td>
+                        <div class="d-flex justify-content-center gap-1">
+                            <button class="btn btn-sm btn-warning" onclick="editPC('${pc.id}')"><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm btn-danger" onclick="deletePC('${pc.id}')"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    function updateDashboard() {
+        const data = getFilteredData();
+        const winCount = {}, officeCount = {}, softCount = {};
+        let winLic = 0, winUnlic = 0, offLic = 0, offUnlic = 0;
+
+        data.forEach(pc => {
+            winCount[pc.windows] = (winCount[pc.windows] || 0) + 1;
+            pc.winLicense ? winLic++ : winUnlic++;
+            
+            if(pc.office !== 'Không có') {
+                officeCount[pc.office] = (officeCount[pc.office] || 0) + 1;
+                pc.officeLicense ? offLic++ : offUnlic++;
+            }
+            
+            pc.software.forEach(soft => {
+                const n = soft.name.toUpperCase(); 
+                softCount[n] = (softCount[n] || 0) + 1;
+            });
+        });
+
+        if(winChart) winChart.destroy(); if(officeChart) officeChart.destroy(); 
+        if(licenseChart) licenseChart.destroy(); if(softChart) softChart.destroy();
+
+        const emptyConfig = { type: 'doughnut', data: { labels: ['Trống'], datasets: [{ data: [1], backgroundColor: ['#e9ecef'] }] }, options: { plugins: { tooltip: { enabled: false } } } };
+
+        winChart = new Chart(document.getElementById('winChart'), Object.keys(winCount).length > 0 ? { type: 'doughnut', data: { labels: Object.keys(winCount), datasets: [{ data: Object.values(winCount), backgroundColor: ['#0d6efd', '#6610f2', '#0dcaf0', '#adb5bd'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } } : emptyConfig);
+        
+        officeChart = new Chart(document.getElementById('officeChart'), Object.keys(officeCount).length > 0 ? { type: 'pie', data: { labels: Object.keys(officeCount), datasets: [{ data: Object.values(officeCount), backgroundColor: ['#fd7e14', '#ffc107', '#198754', '#20c997'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } } : emptyConfig);
+
+        licenseChart = new Chart(document.getElementById('licenseChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Windows', 'Office'],
+                datasets: [
+                    { label: 'Có bản quyền', data: [winLic, offLic], backgroundColor: '#198754' },
+                    { label: 'Chưa bản quyền', data: [winUnlic, offUnlic], backgroundColor: '#dc3545' }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+        });
+
+        const sortedSoft = Object.entries(softCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        softChart = new Chart(document.getElementById('softwareChart'), sortedSoft.length > 0 ? { type: 'bar', data: { labels: sortedSoft.map(i => i[0]), datasets: [{ label: 'Số máy', data: sortedSoft.map(i => i[1]), backgroundColor: '#6c757d' }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } } } : emptyConfig);
+    }
+
+    // Khởi tạo giao diện ban đầu
+    initDepartments(); 
+    window.addSoftwareInput(); 
+
+</script>
+</body>
+</html>
