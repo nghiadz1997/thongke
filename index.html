@@ -185,8 +185,24 @@
                         <div class="section-title"><i class="bi bi-box-seam"></i> 4. Các phần mềm khác</div>
                         <div id="softwareList"></div>
                         <button type="button" class="btn btn-sm btn-outline-secondary w-100 mb-3" onclick="addSoftwareInput()">
-                            <i class="bi bi-plus-circle"></i> Thêm phần mềm (Bản quyền / Free)
+                            <i class="bi bi-plus-circle"></i> Thêm phần mềm
                         </button>
+
+                        <!-- SECTION 5: LỊCH BẢO TRÌ VỆ SINH MÁY -->
+                        <div class="section-title"><i class="bi bi-tools"></i> 5. Lịch bảo trì vệ sinh định kỳ</div>
+                        <div class="row bg-light p-2 rounded mb-3 border">
+                            <div class="col-12 mb-2">
+                                <label class="form-label">Chu kỳ vệ sinh</label>
+                                <select class="form-select form-select-sm" id="maintenanceCycle">
+                                    <option value="6">6 tháng</option>
+                                    <option value="12">12 tháng (1 năm)</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Ngày vệ sinh gần nhất</label>
+                                <input type="date" class="form-control form-control-sm" id="lastMaintenanceDate">
+                            </div>
+                        </div>
                         
                         <!-- BUTTONS -->
                         <div class="d-flex gap-2 sticky-bottom bg-white py-2 border-top">
@@ -212,7 +228,7 @@
                                 <th>Đơn vị</th>
                                 <th>Tên Máy</th>
                                 <th>Model & Serial</th>
-                                <th>Windows</th>
+                                <th>Vệ sinh định kỳ</th>
                                 <th class="text-center">Chi tiết</th>
                                 <th class="text-center">Thao tác</th>
                             </tr>
@@ -263,7 +279,7 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const dbRef = db.ref('pcHardwareNSG'); // Dùng Node mới để lưu cấu trúc mới tránh lỗi
+    const dbRef = db.ref('pcHardwareNSG');
 
     // --- 2. DATA STRUCTURE & LOGIC ---
     const orgStructure = {
@@ -292,10 +308,10 @@
         if(!isChecked) input.value = '';
     }
 
-    window.toggleSoftDuration = function(btn) {
-        const type = btn.value;
-        const input = btn.closest('.software-box').querySelector('.soft-duration');
-        if(type === 'Bản quyền') {
+    window.toggleSoftDuration = function(selectEl) {
+        const type = selectEl.value;
+        const input = selectEl.closest('.software-box').querySelector('.soft-duration');
+        if(type === 'Có bản quyền') {
             input.disabled = false;
         } else {
             input.disabled = true;
@@ -303,11 +319,11 @@
         }
     }
 
-    window.addSoftwareInput = function(name = '', type = 'Free (Cho phép)', duration = '') {
+    window.addSoftwareInput = function(name = '', type = 'Không bản quyền', duration = '') {
         const container = document.getElementById('softwareList');
         const div = document.createElement('div');
         div.className = 'software-box';
-        const isBq = type === 'Bản quyền';
+        const isBq = type === 'Có bản quyền';
         div.innerHTML = `
             <div class="d-flex justify-content-between mb-1">
                 <input type="text" class="form-control form-control-sm soft-name me-2" placeholder="Tên phần mềm (VD: AutoCAD)" value="${name}" required>
@@ -315,20 +331,43 @@
             </div>
             <div class="input-group input-group-sm">
                 <select class="form-select soft-type" onchange="toggleSoftDuration(this)">
-                    <option value="Bản quyền" ${isBq ? 'selected' : ''}>Có Bản Quyền</option>
-                    <option value="Free (Cho phép)" ${!isBq ? 'selected' : ''}>Free (Cho phép)</option>
+                    <option value="Có bản quyền" ${isBq ? 'selected' : ''}>Có bản quyền</option>
+                    <option value="Không bản quyền" ${!isBq ? 'selected' : ''}>Không bản quyền</option>
                 </select>
-                <input type="text" class="form-control soft-duration" placeholder="Thời hạn" value="${duration}" ${!isBq ? 'disabled' : ''}>
+                <input type="text" class="form-control soft-duration" placeholder="Thời hạn (VD: Vĩnh viễn)" value="${duration}" ${!isBq ? 'disabled' : ''}>
             </div>
         `;
         container.appendChild(div);
+    }
+
+    // Hàm tính toán ngày hết hạn vệ sinh
+    function calculateMaintenanceInfo(lastDateStr, cycleMonths) {
+        if (!lastDateStr) return { expiryDateStr: 'Chưa có', isExpired: false, daysLeft: null };
+        const lastDate = new Date(lastDateStr);
+        const expiryDate = new Date(lastDate);
+        expiryDate.setMonth(expiryDate.getMonth() + parseInt(cycleMonths));
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const diffTime = expiryDate - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        const dd = String(expiryDate.getDate()).padStart(2, '0');
+        const mm = String(expiryDate.getMonth() + 1).padStart(2, '0');
+        const yyyy = expiryDate.getFullYear();
+        
+        return {
+            expiryDateStr: `${dd}/${mm}/${yyyy}`,
+            isExpired: diffDays < 0,
+            daysLeft: diffDays
+        };
     }
 
     // --- 3. CRUD THAO TÁC FIREBASE ---
     document.getElementById('pcForm').addEventListener('submit', function(e) {
         e.preventDefault();
         
-        // Thu thập Software
         const softBoxes = document.querySelectorAll('.software-box');
         const softwareArr = [];
         softBoxes.forEach(box => {
@@ -367,7 +406,11 @@
                 isLicensed: document.getElementById('officeLicense').checked,
                 duration: document.getElementById('officeDuration').value.trim()
             },
-            software: softwareArr
+            software: softwareArr,
+            maintenance: {
+                cycle: document.getElementById('maintenanceCycle').value,
+                lastDate: document.getElementById('lastMaintenanceDate').value
+            }
         };
 
         if(editingId) {
@@ -415,6 +458,11 @@
         if(pc.software && pc.software.length > 0) {
             pc.software.forEach(s => addSoftwareInput(s.name, s.type, s.duration));
         }
+
+        // Maintenance
+        const maint = pc.maintenance || {};
+        document.getElementById('maintenanceCycle').value = maint.cycle || '6';
+        document.getElementById('lastMaintenanceDate').value = maint.lastDate || '';
 
         // UI Updates
         document.getElementById('formTitle').innerHTML = '<span><i class="bi bi-pencil-square"></i> Cập nhật PC</span>';
@@ -477,9 +525,19 @@
         }
 
         data.forEach(pc => {
-            const winIcon = pc.os.isLicensed ? '<i class="bi bi-shield-check text-success"></i>' : '<i class="bi bi-shield-x text-danger"></i>';
             let catBadge = pc.category === 'Ban Giám Hiệu' ? 'bg-danger' : (pc.category === 'Khoa' ? 'bg-info text-dark' : 'bg-secondary');
             const hw = pc.hardware || {};
+            const maint = pc.maintenance || {};
+            const maintInfo = calculateMaintenanceInfo(maint.lastDate, maint.cycle);
+            
+            let maintBadge = '';
+            if(!maint.lastDate) {
+                maintBadge = '<span class="badge bg-secondary">Chưa cập nhật</span>';
+            } else if(maintInfo.isExpired) {
+                maintBadge = `<span class="badge bg-danger"><i class="bi bi-exclamation-triangle"></i> Đã hết hạn (${maintInfo.expiryDateStr})</span>`;
+            } else {
+                maintBadge = `<span class="badge bg-success"><i class="bi bi-check-circle"></i> Còn hạn (${maintInfo.expiryDateStr})</span>`;
+            }
             
             tbody.innerHTML += `
                 <tr>
@@ -490,7 +548,10 @@
                         <div class="text-dark small fw-semibold">${hw.product || 'N/A'}</div>
                         <div class="text-muted font-monospace" style="font-size: 0.75rem;">SN: ${hw.serialNumber || 'N/A'}</div>
                     </td>
-                    <td>${pc.os.name} ${winIcon}</td>
+                    <td>
+                        <div class="small fw-semibold">Chu kỳ: ${maint.cycle || '6'} tháng</div>
+                        <div>${maintBadge}</div>
+                    </td>
                     <td class="text-center">
                         <button class="btn btn-sm btn-outline-primary" onclick="showDetail('${pc.id}')">
                             <i class="bi bi-eye"></i> Chi tiết
@@ -513,15 +574,28 @@
         document.getElementById('modalPcName').innerHTML = `<i class="bi bi-pc-display"></i> Thông tin: ${pc.pcName} - ${pc.department}`;
         
         const hw = pc.hardware || {};
+        const maint = pc.maintenance || {};
+        const maintInfo = calculateMaintenanceInfo(maint.lastDate, maint.cycle);
+
         let softHtml = '';
         if(pc.software.length > 0) {
             softHtml = pc.software.map(s => {
-                let badge = s.type === 'Bản quyền' ? 'bg-success' : 'bg-secondary';
-                let dur = s.type === 'Bản quyền' ? `(HSD: ${s.duration || 'N/A'})` : '';
+                let isLicensed = s.type === 'Có bản quyền';
+                let badge = isLicensed ? 'bg-success' : 'bg-secondary';
+                let dur = isLicensed && s.duration ? `(HSD: ${s.duration})` : '';
                 return `<li><b>${s.name}</b> <span class="badge ${badge}">${s.type}</span> <small class="text-muted">${dur}</small></li>`;
             }).join('');
         } else {
             softHtml = '<li><i>Không cài phần mềm phụ</i></li>';
+        }
+
+        let maintStatusText = '';
+        if(!maint.lastDate) {
+            maintStatusText = '<span class="badge bg-secondary">Chưa ghi nhận</span>';
+        } else if(maintInfo.isExpired) {
+            maintStatusText = `<span class="badge bg-danger">Đã quá hạn (Hạn chót: ${maintInfo.expiryDateStr})</span>`;
+        } else {
+            maintStatusText = `<span class="badge bg-success">Đang trong hạn (Hạn chót: ${maintInfo.expiryDateStr})</span>`;
         }
 
         const html = `
@@ -556,6 +630,12 @@
                             ${softHtml}
                         </ul>
                     </div>
+                    <div class="mt-3 pt-2 border-top">
+                        <h6 class="text-warning text-dark"><i class="bi bi-tools"></i> Lịch Vệ Sinh Định Kỳ</h6>
+                        <div class="detail-row"><span class="detail-label">Chu kỳ:</span> <span class="detail-value">${maint.cycle || '6'} tháng</span></div>
+                        <div class="detail-row"><span class="detail-label">Lần vệ sinh cuối:</span> <span class="detail-value">${maint.lastDate || 'Chưa cập nhật'}</span></div>
+                        <div class="detail-row border-0"><span class="detail-label">Trạng thái:</span> <span class="detail-value">${maintStatusText}</span></div>
+                    </div>
                 </div>
             </div>
         `;
@@ -582,14 +662,13 @@
         const catCount = { "Ban Giám Hiệu":0, "Phòng":0, "Khoa":0 };
         const winLic = { "Có BQ":0, "Không BQ":0 };
         const offLic = { "Có BQ":0, "Không BQ":0 };
-        const ramCount = {}; // Trích xuất chữ GB để đếm
+        const ramCount = {};
 
         pcDataList.forEach(pc => {
             catCount[pc.category]++;
             pc.os.isLicensed ? winLic["Có BQ"]++ : winLic["Không BQ"]++;
             if(pc.office.name !== 'Không có') pc.office.isLicensed ? offLic["Có BQ"]++ : offLic["Không BQ"]++;
             
-            // Xử lý thống kê RAM (Rút gọn)
             if(pc.hardware && pc.hardware.ram) {
                 let r = pc.hardware.ram.toUpperCase();
                 let key = r.includes('32GB') ? '32GB' : (r.includes('16GB') ? '16GB' : (r.includes('8GB') ? '8GB' : (r.includes('4GB') ? '4GB' : 'Khác')));
